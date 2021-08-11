@@ -18,7 +18,7 @@ The diagram below explains how script works, assuming:
 - significant tags = dev, rc, prod,
 - ecr repositories limited to: hello_world, other_ecr_repo.
 
-![image info](./docs/ecr cleanup policy.png)
+![example](https://github.com/thabiger/aws-ecr-cleanup/blob/main/docs/ecr%20cleanup%20policy.png)
 
 By default, it runs in dry mode. To print what images will be removed, run:   
 
