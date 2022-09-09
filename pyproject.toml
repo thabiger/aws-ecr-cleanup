@@ -16,6 +16,7 @@ dependencies = [
     "objectpath",
     "boto3",
     "jsonpath-ng"
+    "pyyaml"
 ]
 
 [project.scripts]
