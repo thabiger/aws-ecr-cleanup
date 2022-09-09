@@ -1,2 +1,3 @@
 __pycache__
-main.yaml
+*.egg-info/
+/*.yaml

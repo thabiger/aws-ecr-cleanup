@@ -1,9 +1,14 @@
-protected_period: 365
-protected_count: 13
-significant_tags:
-  - dev
-  - rc
-  - prod
-  - latest
-repositories:
-  - hello_world
+- name: Flush untagged images older than 7 days, leave no less than 7 images
+  protected_period: 7
+  protected_count: 7
+  significant_tags: '*'
+- name: Protect images are that created for a year since a last significant tag, leave no less than 13 images
+  protected_period: 365
+  protected_count: 13
+  significant_tags:
+    - dev
+    - rc
+    - prod
+    - latest
+  repositories:
+    - hello_world

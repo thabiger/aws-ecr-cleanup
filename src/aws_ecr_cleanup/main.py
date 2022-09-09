@@ -3,6 +3,7 @@
 import os
 import re
 import sys
+from urllib import request
 import boto3
 import botocore
 import datetime
@@ -10,7 +11,7 @@ import argparse
 import yaml
 import jsonpath_ng
 import logging
-from configure_logging import configure_logging
+from aws_ecr_cleanup.configure_logging import configure_logging
 
 from dateutil.tz import tzlocal
 
@@ -91,6 +92,21 @@ class Config:
             logger.error("Configuration file doesn't exist!")
             exit(1)
 
+        if self.__data:
+            self.__size = len(self.__data)
+
+    def __iter__(self):
+        self.n = 0
+        return self
+
+    def __next__(self):
+        if self.n < self.__size:
+            r = self.__data[self.n]
+            self.n += 1
+            return r
+        else:
+            raise StopIteration
+
     @property
     def data(self):
         return self.__data
@@ -168,23 +184,24 @@ class Repository:
 
     def images_to_flush(self):
 
-        try:
-            latest_significant_date = self.oldest_significant['imagePushedAt']
-            protected_period = (datetime.datetime.now(
-                datetime.timezone.utc) - latest_significant_date).days + Repository.protected_period
-            flush_from_index = self.image_index('imageDigest', self.older_than(protected_period).pop(0)['imageDigest'])
-        except (IndexError, TypeError):
-            return None
-
         if self.oldest_significant:
-            if flush_from_index:
-                flush_from_index = max(flush_from_index, self.image_index('imageDigest', self.oldest_significant[
-                    'imageDigest']) + Repository.protected_count + 1)
-            else:
-                flush_from_index = self.image_index('imageDigest', self.oldest_significant[
-                    'imageDigest'] + Repository.protected_count + 1)
-
-        return self.images[flush_from_index:]
+            try:
+                latest_significant_date = self.oldest_significant['imagePushedAt']
+                protected_period = (datetime.datetime.now(datetime.timezone.utc) \
+                                        - latest_significant_date).days \
+                                        + Repository.protected_period
+                flush_from_index = max(
+                    self.image_index('imageDigest', self.older_than(protected_period).pop(0)['imageDigest']), 
+                    self.image_index('imageDigest', self.oldest_significant['imageDigest']) + Repository.protected_count + 1
+                )
+                return self.images[flush_from_index:]
+            except (IndexError, TypeError):
+                return None
+        else:
+            # if no significant image is found, I assuma that all tags are significant
+            # and only untagged images beyond the protected period should be flushed
+            flush_from_index = self.image_index('imageDigest', Repository.protected_count + 1)
+            return [i for i in self.images[flush_from_index:] if not 'imageTags' in i]
 
     def flush(self):
 
@@ -343,7 +360,7 @@ def parse_args(args):
                         choices=['debug', 'info', 'warning', 'critical'],
                         help='Console loglevel [info, warning, etc.]. Default: info')
     parser.add_argument('--config', nargs='?', type=str, metavar=('string'),
-                        default=None, help='Configuration file location.')
+                        required=True, help='Configuration file location.')
 
     args = parser.parse_args(args)
 
@@ -358,32 +375,32 @@ def main():
         console_level = args.console_loglevel
     )
 
-    config = Config(config_file=args.config)
-
     if args.apply:
         Repository.dry_run = False
     else:
         logger.warning("WARNING: Running in DRY mode. To make changes effective, run the script with --apply option.")
 
-    Repository.significant_tags = set(config.get('significant_tags'))
-    # protect images are that created for a year since a last significant tag, no less than 13 images
-    Repository.protected_period = config.get('protected_period')  # days
-    Repository.protected_count = config.get('protected_count')  # no less than 13 images
+   
+    for config in Config(config_file=args.config):
 
-    global image_in_use
-    image_in_use = image_currently_in_use_check()
+        Repository.significant_tags = set(config.get('significant_tags'))
+        Repository.protected_period = config.get('protected_period')
+        Repository.protected_count = config.get('protected_count')
 
-    registry = ECR(config.get('repositories'))
+        global image_in_use
+        image_in_use = image_currently_in_use_check()
 
-    if registry:
-        for (name, _) in registry:
-            logger.info("Cleaning up: %s" % name)
-            try:
-                registry.get(name).flush()
-            except AttributeError:
-                logger.error("Unable to flush!")
-    else:
-        logger.error("Unable to get repositories list form the config file. Nothing to do.")
+        registry = ECR(config.get('repositories'))
+
+        if registry:
+            for (name, _) in registry:
+                logger.info("Cleaning up %s according to the policy: %s" % (name, config.get('name')))
+                try:
+                    registry.get(name).flush()
+                except AttributeError:
+                    logger.error("Unable to flush!")
+        else:
+            logger.error("Unable to get repositories list form the config file. Nothing to do.")
 
 
 if __name__ == '__main__':

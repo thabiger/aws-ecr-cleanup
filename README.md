@@ -27,15 +27,20 @@ By default, it runs in dry mode. To print what images will be removed, run:
 with config file content:
 
 ```
-protected_period: 365
-protected_count: 13
-significant_tags:
-  - dev
-  - rc
-  - prod
-repositories:
-  - hello_word
-  - other_ecr_repo
+- name: Flush untagged images older than 7 days, leave no less than 7 images
+  protected_period: 7
+  protected_count: 7
+  significant_tags: '*'
+- name: Protect images are that created for a year since a last significant tag, leave no less than 13 images
+  protected_period: 365
+  protected_count: 13
+  significant_tags:
+    - dev
+    - rc
+    - prod
+    - latest
+  repositories:
+    - hello_world
 ``` 
 
 When no repository list is provided, the script will iterate through all of the ECR repositoreis that are accessible by the AWS account used.

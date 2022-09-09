@@ -1,0 +1,55 @@
+version: 2.1
+orbs:
+  python: circleci/python@1.5.0
+jobs:
+  build-and-test:
+    docker:
+      - image: cimg/python:3.10.2
+    steps:
+      - checkout
+      - restore_cache:
+          key: v1-dependency-cache-{{ checksum "pyproject.toml" }}
+      - python/install-packages:
+          pkg-manager: pip
+      - run:
+          name: Build
+          command: python -m build
+      - save_cache:
+          key: v1-dependency-cache-{{ checksum "pyproject.toml" }}
+          paths:
+            - "dist"
+  
+  publish:
+    docker:
+      - image: cimg/python:3.10.2
+    steps:
+      - checkout
+      - restore_cache:
+          key: v1-dependency-cache-{{ checksum "pyproject.toml" }}
+      - run:
+          command: |
+            pip install twine
+      - run:
+          name: upload to pypi
+          environment:
+            TWINE_USERNAME: __token__
+          command: |
+            export TWINE_PASSWORD="$pypi_token"
+            twine upload dist/*
+
+workflows:
+  build_and_publish:
+    jobs:
+      - build-and-test:
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
+      - publish:
+          context: org
+          filters:
+            tags:
+              only: /[0-9]+(\.[0-9]+)*/
+            branches:
+              ignore: /.*/
