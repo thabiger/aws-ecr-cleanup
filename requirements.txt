@@ -1,3 +1,5 @@
+twine
+build
 boto3
 objectpath
 jsonpath-ng
