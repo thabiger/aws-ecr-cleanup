@@ -47,6 +47,8 @@ workflows:
             branches:
               ignore: /.*/
       - publish:
+          requires:
+            - build-and-test
           context: org
           filters:
             tags:
