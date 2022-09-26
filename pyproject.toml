@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aws-ecr-cleanup"
 description = "A tool to remove stale images from AWS ECR repositories."
-version = "0.0.5"
+version = "0.1.5"
 readme = "README.md"
 license = { file="LICENSE" }
 requires-python = ">=3.8"
@@ -23,7 +23,7 @@ dependencies = [
 aws-ecr-cleanup = "aws_ecr_cleanup.main:main"
 
 [tool.bumpver]
-current_version = "0.0.5"
+current_version = "0.1.5"
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message = "bump version {old_version} -> {new_version}"
 commit = true
