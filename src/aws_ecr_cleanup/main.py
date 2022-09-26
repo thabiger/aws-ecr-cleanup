@@ -383,6 +383,13 @@ def main():
    
     for config in Config(config_file=args.config):
 
+        repositories = config.get('repositories')
+        protected_repositories = config.get('protected_repositories')
+
+        if protected_repositories and repositories:
+            logger.error("ERROR: You cannot use both options `protected_repositories` and `repositories` at the same time.")
+            exit(1)
+
         Repository.significant_tags = set(config.get('significant_tags'))
         Repository.protected_period = config.get('protected_period')
         Repository.protected_count = config.get('protected_count')
@@ -390,15 +397,18 @@ def main():
         global image_in_use
         image_in_use = image_currently_in_use_check()
 
-        registry = ECR(config.get('repositories'))
+        registry = ECR(repositories)
 
         if registry:
             for (name, _) in registry:
-                logger.info("Cleaning up %s according to the policy: %s" % (name, config.get('name')))
-                try:
-                    registry.get(name).flush()
-                except AttributeError:
-                    logger.error("Unable to flush!")
+                if protected_repositories and (name in protected_repositories):
+                    logger.info("Skiping `%s` as protected repository" % name)
+                else:
+                    logger.info("Cleaning up `%s` according to the policy: `%s`" % (name, config.get('name')))
+                    try:
+                        registry.get(name).flush()
+                    except AttributeError:
+                        logger.error("Unable to flush!")
         else:
             logger.error("Unable to get repositories list form the config file. Nothing to do.")
 

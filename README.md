@@ -31,6 +31,8 @@ with config file content:
   protected_period: 7
   protected_count: 7
   significant_tags: '*'
+  protected_repositories:
+    - some_ignored_repository
 - name: Protect images are that created for a year since a last significant tag, leave no less than 13 images
   protected_period: 365
   protected_count: 13
@@ -43,7 +45,8 @@ with config file content:
     - hello_world
 ``` 
 
-When no repository list is provided, the script will iterate through all of the ECR repositoreis that are accessible by the AWS account used.
+When no repository list is provided, the script will iterate through all of the ECR repositories that are accessible by the AWS account used.
+To skip some repositories use `protected_repositories` option.
 
 To actually remove the images, run: 
 
